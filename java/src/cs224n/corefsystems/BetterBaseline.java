@@ -39,7 +39,6 @@ public class BetterBaseline implements CoreferenceSystem {
         }
       }
     }
-    System.out.println(trainCoreferenceData);
 	}
 
 	@Override

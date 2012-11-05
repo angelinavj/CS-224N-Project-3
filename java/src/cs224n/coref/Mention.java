@@ -4,6 +4,7 @@ import cs224n.ling.Tree;
 import cs224n.util.Decodable;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -67,6 +68,16 @@ public class Mention implements Serializable, Decodable {
     this.headWordIndex = headWordIndex;
   }
 
+  public List<String> getModifiers() {
+    List<String> result = new ArrayList<String>();
+    for (int idx = beginIndexInclusive; idx < endIndexExclusive; idx++) {
+      if (sentence.posTags.get(idx).equals("NP") ||
+          sentence.posTags.get(idx).equals("ADJP")) {
+        result.add(sentence.words.get(idx));
+      }
+    }
+    return result;
+  }
   /**
    * The text of this mention, as a list of words
    * @return A list of words corresponding to this mention
