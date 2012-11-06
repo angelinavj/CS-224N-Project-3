@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-
+import java.util.Map;
 /**
  * Represent linguistic trees, with each node consisting of a label
  * and a list of children.
@@ -69,6 +69,59 @@ public class Tree<L> implements Serializable, Decodable {
     }
   }
 
+  public static <L> List<Tree<L> > getChildrenOfAllTrees(List<Tree<L> > parents) {
+    ArrayList<Tree<L> > result = new ArrayList<Tree<L> > ();
+    for (Tree<L> parent: parents) {
+      for (Tree<L> child: parent.getChildren()) {
+        result.add(child);
+      }
+    }
+    return result;
+  }
+
+  /* 
+   * Returns breadth-first traversal of the tree, on all nodes that's on
+   * the left of the path given in pathBoundary param. When pathBoundary
+   * is null, will return all nodes, ordered by breadth-first traversal.
+   */
+
+  public static <L> List<Tree<L> > getBFSTraversalWithRightBoundary(
+              Tree<L> roottree, List<Tree<L> > pathBoundary) {
+    List<Tree<L> > treesInDepth = new ArrayList<Tree<L> > ();
+    List<Tree<L> > result = new ArrayList<Tree<L> >();
+
+    treesInDepth.add(roottree);
+    int depthFromTop = 0;
+    while (true) {
+      treesInDepth = Tree.getChildrenOfAllTrees(treesInDepth);
+      if (treesInDepth.size() == 0) break;
+      depthFromTop++;
+
+      int pIndex = -1;
+      for (int i = 0; i < treesInDepth.size(); i++) {
+        Tree<L> tree = treesInDepth.get(i);
+        if ((pathBoundary != null) &&
+            (depthFromTop < pathBoundary.size()) &&
+            (tree.equals(pathBoundary.get(depthFromTop)))) {
+          if (depthFromTop == pathBoundary.size()) {
+            pIndex = i;
+          } else {
+            pIndex = i+1;
+          }
+          break;
+        }
+        result.add(treesInDepth.get(i));
+      }
+
+      if (pIndex > -1) {
+        for (int i = pIndex; i < treesInDepth.size(); i++) {
+          treesInDepth.remove(pIndex);
+        }
+      }
+    }
+    return result;
+
+  }
   /* Returns a list of the preterminals gotten by traversing from left
    * to right.  This is effectively an POS tagging for the words that
    * tree represents. */
@@ -114,6 +167,13 @@ public class Tree<L> implements Serializable, Decodable {
     }
     if (! preOrder)
       traversal.add(tree);
+  }
+
+  public static <L> void extractParentRelationship(Tree<L> tree, Map<Tree<L>, Tree<L> > parentInfo) {
+    for (Tree<L> child : tree.getChildren()) {
+      parentInfo.put(child, tree);
+      extractParentRelationship(child, parentInfo);
+    }
   }
 
   /* Set the words at the leaves of a tree to the words from the
