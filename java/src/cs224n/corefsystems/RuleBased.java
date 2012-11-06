@@ -217,10 +217,8 @@ public class RuleBased implements CoreferenceSystem {
 
   private boolean isHighestSInSentence(Tree<String> tree,
                   Map<Tree<String>, Tree<String> > parentInfo) {
-    if (!tree.getLabel().equals("S")) {
-      return false;
-    }
     Tree<String> curTree = parentInfo.get(tree);
+
     while (curTree != null) {
       if (curTree.getLabel().equals("S")) {
         return false;
@@ -252,7 +250,8 @@ public class RuleBased implements CoreferenceSystem {
 
       if (currentTree.getLabel().equals("NP") ||
           currentTree.getLabel().equals("S")) {
-        resultTree = currentTree = currentTree;
+        resultTree = currentTree;
+        break;
       }
 
       currentTree = parentInfo.get(currentTree);
@@ -299,7 +298,7 @@ public class RuleBased implements CoreferenceSystem {
             currentTree.getLabel().equals("S")) {
             Mention match = parseToMentionMap.get(tree);
             if ((match != null) && (doesPassConstraints(m, match))) {
-              return parseToMentionMap.get(tree);
+              return match;
             }
             break;
           }
@@ -307,31 +306,88 @@ public class RuleBased implements CoreferenceSystem {
         }
       }
     }
-    //4. If X is the highest S in the sentence:  
-    if (isHighestSInSentence(XTree, parentInfo)) {
-      // Traverse parse trees of previous sentences in order of recency.
-      for (int i = doc.indexOfSentence(m.sentence) - 1; i >= 0; i--) {
-        Sentence curSentence = doc.sentences.get(i);
-        for (Tree<String> tree: Tree.getBFSTraversalWithRightBoundary(curSentence.parse, null)) {
-          if (tree.getLabel().equals("NP")) {
-            Mention match = parseToMentionMap.get(tree);
-            if ((match != null) && (doesPassConstraints(m, match))) {
-              return parseToMentionMap.get(tree);
+
+    while (XTree != null) {
+      //4. If X is the highest S in the sentence:  
+      if (isHighestSInSentence(XTree, parentInfo)) {
+        // Traverse parse trees of previous sentences in order of recency.
+        for (int i = doc.indexOfSentence(m.sentence) - 1; i >= 0; i--) {
+          Sentence curSentence = doc.sentences.get(i);
+          for (Tree<String> tree: Tree.getBFSTraversalWithRightBoundary(curSentence.parse, null)) {
+            if (tree.getLabel().equals("NP")) {
+              Mention match = parseToMentionMap.get(tree);
+              if ((match != null) && (doesPassConstraints(m, match))) {
+                return match;
+              }
             }
           }
         }
+        break;
+
+      } else {
+        // 5. From node X, go up the tree to the first NP or S.
+        Tree<String> XTree2 = closestNPOrSAncestor(XTree, parentInfo, pathP);
+        if (XTree.equals(XTree2)) {
+          System.out.println("cyclic");
+        }
+        // 6. If X is an NP and the path p to X did not pass through the
+        // nominal that X dominates, propose X as antecedent
+        if (XTree2.getLabel().equals("NP")) {
+          boolean hasNominal = false;
+          for (Tree<String> tree: pathP) {
+            if (tree.equals(XTree2) || tree.equals(XTree)) {
+              continue;
+            }
+            if (isNominal(tree.getLabel())) {
+              hasNominal = true;
+              break;
+            }
+          }
+          if (!hasNominal) {
+            Mention match = parseToMentionMap.get(XTree2);
+            if ((match != null) && (doesPassConstraints(m, match))) {
+              return match;
+            }
+          }
+        } 
+        // 7. Traverse all branches below X to the left of the path. Propose
+        // any NP encountered as the antecedent.
+  
+        for (Tree<String> tree: Tree.getBFSTraversalWithRightBoundary(XTree2, pathP)) { 
+          if (tree.getLabel().equals("NP")) {
+            Mention match = parseToMentionMap.get(tree);
+            if ((match != null) && (doesPassConstraints(m, match))) {
+              return match;
+            }
+          }
+        }
+  
+  
+        // 8. If X is an S node, traverse all branches of X to the right of the path
+        // but do not go below any NP or S encountered. Propose any NP as the antecedent.
+        if (XTree2.getLabel().equals("S")) {
+          for (Tree<String> tree: Tree.getBFSTraversalWithLeftBoundary(XTree2, pathP)) {
+            if (tree.getLabel().equals("NP")) {
+              Mention match = parseToMentionMap.get(tree);
+              if ((match != null) && (doesPassConstraints(m, match))) {
+                return match;
+              }
+            }
+          }
+        }
+
+       XTree = XTree2;
+  
       }
-    } else {
+    } 
 
-      // 6. From node X, go up the three to the first NP or S.
-      XTree = closestNPOrSAncestor(XTree, parentInfo, pathP);
-
-
-    }
-    return m;
+    return null;
   }
 
 
+  private boolean isNominal(String tag) {
+    return tag.equals("NN") || tag.equals("NNS") || tag.equals("NNP") || tag.equals("NNPS");
+  }
 
 	@Override
 	public List<ClusteredMention> runCoreference(Document doc) {
@@ -374,7 +430,7 @@ public class RuleBased implements CoreferenceSystem {
       for (Mention m1: cluster1) {
         if (Pronoun.isSomePronoun(m1.gloss())) {
           Mention match = getHobbsMatch(doc, m1);
-
+          if (match == null) continue;
           for (Set<Mention> cluster2: clusters) {
             if (cluster1.equals(cluster2)) continue;
 

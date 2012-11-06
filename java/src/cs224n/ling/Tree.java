@@ -122,6 +122,55 @@ public class Tree<L> implements Serializable, Decodable {
     return result;
 
   }
+
+  /* 
+   * Returns breadth-first traversal of the tree, on all nodes that's on
+   * the right of the path given in pathBoundary param. When pathBoundary
+   * is null, will return all nodes, ordered by breadth-first traversal.
+   */
+
+  public static <L> List<Tree<L> > getBFSTraversalWithLeftBoundary(
+              Tree<L> roottree, List<Tree<L> > pathBoundary) {
+    List<Tree<L> > treesInDepth = new ArrayList<Tree<L> > ();
+    List<Tree<L> > result = new ArrayList<Tree<L> >();
+
+    treesInDepth.add(roottree);
+    int depthFromTop = 0;
+    while (true) {
+      treesInDepth = Tree.getChildrenOfAllTrees(treesInDepth);
+      if (treesInDepth.size() == 0) break;
+      depthFromTop++;
+
+      int pIndex = -1;
+      boolean canAdd = false;
+      for (int i = 0; i < treesInDepth.size(); i++) {
+        Tree<L> tree = treesInDepth.get(i);
+        if (canAdd) {
+          result.add(treesInDepth.get(i));
+        }
+
+        if ((pathBoundary != null) &&
+            (depthFromTop < pathBoundary.size()) &&
+            (tree.equals(pathBoundary.get(depthFromTop)))) {
+          if (depthFromTop == pathBoundary.size()) {
+            pIndex = i;
+          } else {
+            pIndex = i - 1;
+          }
+          canAdd = true;
+        }
+      }
+
+
+      if (pIndex > -1) {
+        for (int i = 0; i <= pIndex; i++) {
+          treesInDepth.remove(0);
+        }
+      }
+    }
+    return result;
+
+  }
   /* Returns a list of the preterminals gotten by traversing from left
    * to right.  This is effectively an POS tagging for the words that
    * tree represents. */
