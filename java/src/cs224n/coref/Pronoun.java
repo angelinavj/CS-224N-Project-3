@@ -72,6 +72,68 @@ public enum Pronoun {
     this.type = type;
     this.plural = plural;
   }
+  
+  private static String[] firstPerson = new String[] {
+      "i",
+      "me",
+      "mine",
+      "my",
+      "myself",
+      "one",
+      "one's",
+      "oneself",
+      "our",
+      "ours",
+      "ourself",
+      "ourselves",
+      "us",
+      "we",
+  };
+  
+  private static String[] secondPerson = new String[] {
+      "y'all",
+      "y'all's",
+      "y'all's selves",
+      "ye",
+      "you",
+      "you all",
+      "your",
+      "yours",
+      "yourself",
+      "yourselves",
+      "youse",
+      "thee",
+      "thy",
+      "thou",
+      "thyself",
+      "thine",
+  };
+  
+  private static String[] thirdPerson = new String[] {
+      "all",
+      "he",
+      "her",
+      "hers",
+      "herself",
+      "him",
+      "himself",
+      "his",
+      "hisself",
+      "it",
+      "its",
+      "itself",
+      "one",
+      "one's",
+      "oneself",
+      "she",
+      "their",
+      "theirs",
+      "theirselves",
+      "them",
+      "themself",
+      "themselves",
+      "they",
+  };
 
   private static String[] pronounList = new String[]{
       "i",
@@ -126,7 +188,9 @@ public enum Pronoun {
       "youse",
   };
   private static Set<String> pronounSet = new HashSet<String>();
-
+  private static Set<String> firstSet = new HashSet<String>();
+  private static Set<String> secondSet = new HashSet<String>();
+  private static Set<String> thirdSet = new HashSet<String>();
   /**
    * The known pronouns
    * @return An iterable over the known pronouns
@@ -135,6 +199,14 @@ public enum Pronoun {
     return pronounSet;
   }
 
+  /**can only be called on pronoun */
+  public static int person(String pronoun) {
+	  if(firstSet.contains(pronoun)) return 1;
+	  if(secondSet.contains(pronoun)) return 2;
+	  if(thirdSet.contains(pronoun)) return 3;
+	  return 0;
+  }
+  
   /**
    * Determine whether a candidate String is a pronoun
    * @param cand The candidate String
@@ -156,5 +228,15 @@ public enum Pronoun {
       if(pronounSet.contains(pronoun)){ throw new IllegalStateException("Duplicate pronoun: " + pronoun); }
       pronounSet.add(pronoun);
     }
+    for(String pronoun: firstPerson) {
+    	firstSet.add(pronoun);
+    }
+    for(String pronoun: secondPerson) {
+    	secondSet.add(pronoun);
+    }
+    for(String pronoun: thirdPerson) {
+    	thirdSet.add(pronoun);
+    }
+
   }
 }

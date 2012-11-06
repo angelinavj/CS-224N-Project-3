@@ -26,18 +26,24 @@ public class ClassifierBased implements CoreferenceSystem {
 		Collections.addAll(rtn, array);
 		return rtn;
 	}
-
+	
 	private static final Set<Object> ACTIVE_FEATURES = mkSet(new Object[]{
-
-			/*
-			 * TODO: Create a set of active features
-			 */
-
 			Feature.ExactMatch.class,
-
-			//skeleton for how to create a pair feature
-			//Pair.make(Feature.IsFeature1.class, Feature.IsFeature2.class),
-	});
+			//Feature.FixedIsPronoun.class,
+			//Feature.CandIsPronoun.class,
+			//Feature.WordDist.class,
+			//Feature.CandIsName.class,
+			//Feature.FixedIsName.class,
+			//Feature.FixedIsDef.class,
+			//Feature.CandIsDef.class,
+			Feature.GenderAgreement.class,
+			//Feature.PersonAgreement.class,
+			Pair.make(Feature.PersonCand.class, Feature.PersonFixed.class),
+			//Pair.make(Feature.CandGender.class, Feature.FixedGender.class),
+			Pair.make(Feature.FixedIsPronoun.class, Feature.CandIsPronoun.class),
+			//Pair.make(Feature.FixedIsName.class, Feature.CandIsName.class),
+			//Pair.make(Feature.FixedIsDef.class, Feature.CandIsDef.class),
+	});	
 
 
 	private LinearClassifier<Boolean,Feature> classifier;
@@ -55,15 +61,61 @@ public class ClassifierBased implements CoreferenceSystem {
 			Mention candidate = input.getSecond().mention; //the second mention (referred to as m_j in the handout)
 			Entity candidateCluster = input.getSecond().entity; //the cluster containing the second mention
 
-
 			//--Features
 			if(clazz.equals(Feature.ExactMatch.class)){
 				//(exact string match)
 				return new Feature.ExactMatch(onPrix.gloss().equals(candidate.gloss()));
-//			} else if(clazz.equals(Feature.NewFeature.class) {
-				/*
-				 * TODO: Add features to return for specific classes. Implement calculating values of features here.
-				 */
+			} else if(clazz.equals(Feature.FixedIsPronoun.class)) {
+				return new Feature.FixedIsPronoun(Pronoun.isSomePronoun(onPrix.gloss()));
+			} else if(clazz.equals(Feature.CandIsPronoun.class)) {
+				return new Feature.CandIsPronoun(Pronoun.isSomePronoun(candidate.gloss()));
+			} else if(clazz.equals(Feature.WordDist.class)) {
+				int wordDist = onPrix.beginIndexInclusive - candidate.endIndexExclusive;
+				return new Feature.WordDist(wordDist);
+			} else if(clazz.equals(Feature.CandIsName.class)) {
+				return new Feature.CandIsName(Name.isName(candidate.gloss()));
+			} else if(clazz.equals(Feature.FixedIsName.class)) {
+				return new Feature.FixedIsName(Name.isName(onPrix.gloss()));
+			} else if(clazz.equals(Feature.FixedIsDef.class)) {
+				return new Feature.FixedIsDef(onPrix.gloss().toLowerCase().startsWith("the "));
+			}else if(clazz.equals(Feature.CandIsDef.class)) {
+				return new Feature.CandIsDef(candidate.gloss().toLowerCase().startsWith("the "));
+			}else if(clazz.equals(Feature.GenderAgreement.class)) {
+				Gender candGender = null;
+				if(Name.isName(candidate.gloss())) {
+					candGender = Name.gender(candidate.gloss());
+				} else if(Pronoun.isSomePronoun(candidate.gloss())) {
+					Pronoun candPronoun = Pronoun.valueOrNull(candidate.gloss());
+					if(candPronoun != null)
+						candGender = Pronoun.valueOrNull(candidate.gloss()).gender;
+				}
+				Gender fixedGender = null;
+				if(Name.isName(onPrix.gloss())) {
+					fixedGender = Name.gender(onPrix.gloss());
+				} else if(Pronoun.isSomePronoun(onPrix.gloss())) {
+					Pronoun fixedPronoun = Pronoun.valueOrNull(onPrix.gloss());
+					if(fixedPronoun != null)
+						fixedGender = Pronoun.valueOrNull(onPrix.gloss()).gender;
+				}
+				if(candGender==null || fixedGender == null)
+					return new Feature.GenderAgreement(true);
+				//if(candGender == fixedGender)
+				//	System.out.println("Same gender: " + candidate.gloss() + ", " + onPrix.gloss());
+				return new Feature.GenderAgreement(candGender != fixedGender);
+			} else if(clazz.equals(Feature.PersonAgreement.class)) {
+				int person1 = -1;
+				int person2 = -1;
+				if(Pronoun.isSomePronoun(candidate.gloss())) {
+					person1 = Pronoun.person(candidate.gloss());
+				}
+				if(Pronoun.isSomePronoun(onPrix.gloss())) {
+					person2 = Pronoun.person(onPrix.gloss());
+				}
+				return new Feature.PersonAgreement((person1!=-1 && person2!=-1 && person1==person2));
+			} else if(clazz.equals(Feature.PersonCand.class)) {
+				return new Feature.PersonCand(Pronoun.person(candidate.gloss()));
+			} else if(clazz.equals(Feature.PersonFixed.class)) {
+				return new Feature.PersonFixed(Pronoun.person(onPrix.gloss()));
 			}
 			else {
 				throw new IllegalArgumentException("Unregistered feature: " + clazz);
@@ -160,7 +212,7 @@ public class ClassifierBased implements CoreferenceSystem {
 			Feature feature = featureInfo.first();
 			Boolean label = featureInfo.second();
 			Double magnitude = featureInfo.third();
-			//log(FORCE,new DecimalFormat("0.000").format(magnitude) + " [" + label + "] " + feature);
+			log(FORCE,new DecimalFormat("0.000").format(magnitude) + " [" + label + "] " + feature);
 		}
 		end_Track("Features");
 		endTrack("Training");
