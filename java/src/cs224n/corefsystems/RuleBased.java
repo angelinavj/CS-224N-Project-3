@@ -96,17 +96,21 @@ public class RuleBased implements CoreferenceSystem {
   }
 
 
-  private boolean isAppositive(Mention m1, Mention m2) {
-
+  private boolean isAppositive(Mention m1, Mention m2, Document doc) {
     if (!m1.sentence.equals(m2.sentence)) return false;
 
     if (!m1.parse.getLabel().equals(m2.parse.getLabel())) return false;
     if (!m1.parse.getLabel().equals("NP")) return false;
 
-    if ((m1.endIndexExclusive == m2.beginIndexInclusive) ||
-          (m1.endIndexExclusive + 1 == m2.beginIndexInclusive &&
-            m1.sentence.posTags.get(m1.endIndexExclusive).equals("VBD"))) {
+    if (doc.indexOfMention(m1) == doc.indexOfMention(m2) + 1) {
       return true;
+    }
+
+    if (doc.indexOfMention(m1) == doc.indexOfMention(m2) + 2) {
+      Mention m3 = doc.getMentions().get(doc.indexOfMention(m2) + 1);
+      if (m3.headToken().posTag().equals("VBD")) {
+        return true;
+      }
     }
     return false;
   }
@@ -128,7 +132,8 @@ public class RuleBased implements CoreferenceSystem {
     }
     return true;
   }
-  private boolean isMatchWithPriority(Set<Mention> cluster1, Set<Mention> cluster2, int priority) {
+ 
+  private boolean isMatchWithPriority(Document doc, Set<Mention> cluster1, Set<Mention> cluster2, int priority) {
     switch (priority) {
       case 1:
               for (Mention m1: cluster1) {
@@ -161,7 +166,7 @@ public class RuleBased implements CoreferenceSystem {
             for (Mention m2: cluster2) {
               // Shouldn't have used this line :-( how to fix?
               if (!m1.headWord().equals(m2.headWord())) continue;
-              if (isAppositive(m1,m2) && (doesPassConstraints(m1, m2))) {
+              if (isAppositive(m1,m2, doc) && (doesPassConstraints(m1, m2))) {
                 return true;
               }
 
@@ -207,9 +212,20 @@ public class RuleBased implements CoreferenceSystem {
               }
             }
           }
-
+        
           return false; 
+      case 6:
+        for (Mention m1: cluster1) {
+          if (!m1.headToken().isQuoted()) continue;
+          Pronoun p = Pronoun.valueOrNull(m1.gloss());
+          if (p == null) continue;
 
+          for (Mention m2: cluster2) {
+            if (m1.headToken().speaker().equals(m2.gloss()) && (p.speaker == Pronoun.Speaker.FIRST_PERSON)) {
+              return true; 
+            }
+          }
+        }
       default: return false;
     }
   }
@@ -327,9 +343,6 @@ public class RuleBased implements CoreferenceSystem {
       } else {
         // 5. From node X, go up the tree to the first NP or S.
         Tree<String> XTree2 = closestNPOrSAncestor(XTree, parentInfo, pathP);
-        if (XTree.equals(XTree2)) {
-          System.out.println("cyclic");
-        }
         // 6. If X is an NP and the path p to X did not pass through the
         // nominal that X dominates, propose X as antecedent
         if (XTree2.getLabel().equals("NP")) {
@@ -413,7 +426,7 @@ public class RuleBased implements CoreferenceSystem {
           for (Set<Mention> cluster2: clusters) {
             if (cluster1.equals(cluster2)) continue;
 
-            if (isMatchWithPriority(cluster1, cluster2, i)) {
+            if (isMatchWithPriority(doc, cluster1, cluster2, i)) {
               cluster1.addAll(cluster2);
               cluster2.removeAll(cluster2);
               foundMatch = true;
