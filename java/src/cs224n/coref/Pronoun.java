@@ -201,9 +201,9 @@ public enum Pronoun {
 
   /**can only be called on pronoun */
   public static int person(String pronoun) {
-	  if(firstSet.contains(pronoun)) return 1;
-	  if(secondSet.contains(pronoun)) return 2;
-	  if(thirdSet.contains(pronoun)) return 3;
+	  if(firstSet.contains(pronoun.toLowerCase())) return 1;
+	  if(secondSet.contains(pronoun.toLowerCase())) return 2;
+	  if(thirdSet.contains(pronoun.toLowerCase())) return 3;
 	  return 0;
   }
   

@@ -31,18 +31,19 @@ public class ClassifierBased implements CoreferenceSystem {
 			Feature.ExactMatch.class,
 			//Feature.FixedIsPronoun.class,
 			//Feature.CandIsPronoun.class,
-			//Feature.WordDist.class,
+			Feature.WordDist.class,
 			//Feature.CandIsName.class,
 			//Feature.FixedIsName.class,
 			//Feature.FixedIsDef.class,
 			//Feature.CandIsDef.class,
 			Feature.GenderAgreement.class,
+			Feature.HeadMatch.class,
 			//Feature.PersonAgreement.class,
 			Pair.make(Feature.PersonCand.class, Feature.PersonFixed.class),
 			//Pair.make(Feature.CandGender.class, Feature.FixedGender.class),
 			Pair.make(Feature.FixedIsPronoun.class, Feature.CandIsPronoun.class),
 			//Pair.make(Feature.FixedIsName.class, Feature.CandIsName.class),
-			//Pair.make(Feature.FixedIsDef.class, Feature.CandIsDef.class),
+			Pair.make(Feature.FixedIsDef.class, Feature.CandIsDef.class),
 	});	
 
 
@@ -70,8 +71,13 @@ public class ClassifierBased implements CoreferenceSystem {
 			} else if(clazz.equals(Feature.CandIsPronoun.class)) {
 				return new Feature.CandIsPronoun(Pronoun.isSomePronoun(candidate.gloss()));
 			} else if(clazz.equals(Feature.WordDist.class)) {
-				int wordDist = onPrix.beginIndexInclusive - candidate.endIndexExclusive;
-				return new Feature.WordDist(wordDist);
+				int wordDist = Math.abs(onPrix.beginIndexInclusive - candidate.endIndexExclusive);
+				if(wordDist > 20) 	return new Feature.WordDist(4);
+				if(wordDist > 10) 	return new Feature.WordDist(3);
+				if(wordDist > 5) 	return new Feature.WordDist(2);
+				if(wordDist > 2) 	return new Feature.WordDist(1);
+				return new Feature.WordDist(0);
+
 			} else if(clazz.equals(Feature.CandIsName.class)) {
 				return new Feature.CandIsName(Name.isName(candidate.gloss()));
 			} else if(clazz.equals(Feature.FixedIsName.class)) {
@@ -116,6 +122,8 @@ public class ClassifierBased implements CoreferenceSystem {
 				return new Feature.PersonCand(Pronoun.person(candidate.gloss()));
 			} else if(clazz.equals(Feature.PersonFixed.class)) {
 				return new Feature.PersonFixed(Pronoun.person(onPrix.gloss()));
+			} else if(clazz.equals(Feature.HeadMatch.class)) {
+				return new Feature.HeadMatch(candidate.headWord().equalsIgnoreCase(onPrix.headWord()));
 			}
 			else {
 				throw new IllegalArgumentException("Unregistered feature: " + clazz);

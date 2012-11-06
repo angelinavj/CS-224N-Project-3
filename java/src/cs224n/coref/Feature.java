@@ -152,7 +152,9 @@ public interface Feature {
 		public PersonFixed(int featureVal){ super(featureVal); }
 	}
 
-	
+	public static class HeadMatch extends Indicator {
+		public HeadMatch(boolean featureVal){ super(featureVal); }
+	}
 	/*
 	 * TODO: Add values to the indicators here.
 	 */
